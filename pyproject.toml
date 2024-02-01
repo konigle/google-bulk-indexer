@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gsc-bulk-indexer"
+version = "0.1.0"
+description = "Utilities for automatically submitting website pages for indexing in bulk to Google Search Console"
+authors = ["Konigle Developers <developers@konigle.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+google-auth = "^2.27.0"
+requests = "^2.31.0"
+python-dateutil = "^2.8.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
