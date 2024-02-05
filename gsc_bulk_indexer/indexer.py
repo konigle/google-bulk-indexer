@@ -73,7 +73,7 @@ class BulkIndexer:
                 utils.logger.warning(
                     f"❌ No sitemaps found for {self._property}. Exiting..."
                 )
-                return
+                return 0
             if self._use_cache and self._use_cached_urls:
                 self._load_cached_urls()
             else:
@@ -82,7 +82,7 @@ class BulkIndexer:
             utils.logger.warning(
                 f"❌ No URLs found for {self._property}. Exiting..."
             )
-            return
+            return 0
         else:
             utils.logger.info(f"Found {len(self._urls)} URLs")
 
@@ -96,7 +96,7 @@ class BulkIndexer:
                 "✨ No URLs are eligible for submission. "
                 "They are already submitted or indexed"
             )
-            return
+            return 0
         utils.logger.info(f"🔍 Found {num_urls} URLs for submission.")
         self._request_indexing(urls)
         utils.logger.info(

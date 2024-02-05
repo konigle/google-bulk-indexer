@@ -11,8 +11,12 @@ python = "^3.9"
 google-auth = "^2.27.0"
 requests = "^2.31.0"
 python-dateutil = "^2.8.2"
-aiohttp = "^3.9.3"
+aiohttp = "~3.7.0"
 
+
+[tool.poetry.group.dev.dependencies]
+twine = "^4.0.2"
+keyrings-google-artifactregistry-auth = "^1.1.2"
 
 [build-system]
 requires = ["poetry-core"]
