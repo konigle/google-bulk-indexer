@@ -1,4 +1,6 @@
+import asyncio
 import datetime
+import itertools
 import typing
 from urllib.parse import urlparse
 
@@ -148,21 +150,39 @@ class BulkIndexer:
                 urls_to_submit.extend(self._status_urls_map[status])
         return urls_to_submit
 
+    async def _check_indexing_status_batch(self, urls: typing.List[str]):
+        tasks = [self._indexer.get_indexing_status(url) for url in urls]
+        return await asyncio.gather(*tasks)
+
     def _check_indexing_status(self):
-        # TODO: do async requests to speed things up.
         utils.logger.info("Checking indexing status...")
+        to_recheck: typing.List[str] = []
         for url in self._urls:
             current_state = self._cache.get(url) or {}
             if self._should_check_indexing_status(current_state):
-                indexing_status = self._indexer.get_indexing_status(url)
-                current_state.update(indexing_status)
-                self._cache[url] = current_state
-                status = indexing_status.get("status")
+                to_recheck.append(url)
             else:
                 status = current_state.get("status")
-            self._status_urls_map.setdefault(status, []).append(url)
+                self._status_urls_map.setdefault(status, []).append(url)
+        if to_recheck:
+            self._batched_check_indexing_status(to_recheck)
         if self._use_cache:
             self._cache.dump()
+
+    def _batched_check_indexing_status(
+        self, urls: typing.List[str], batch_size: int = 10
+    ):
+        for url_batch in itertools.zip_longest(*[iter(urls)] * batch_size):
+            url_batch = list(filter(None, url_batch))
+            current_states = asyncio.run(
+                self._check_indexing_status_batch(url_batch)
+            )
+            for url, state in zip(url_batch, current_states):
+                current_state = self._cache.get(url) or {}
+                current_state.update(state)
+                self._cache[url] = current_state
+                status = state.get("status")
+                self._status_urls_map.setdefault(status, []).append(url)
 
     def _load_sitemaps(self):
         self._sitemaps = gsc.get_sitemaps(self._site_url, self._access_token)

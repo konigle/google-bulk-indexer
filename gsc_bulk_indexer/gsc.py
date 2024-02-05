@@ -1,7 +1,9 @@
 import datetime
+import re
 import typing
 import urllib.parse
 
+import aiohttp
 import dateutil.parser
 import requests
 
@@ -94,7 +96,7 @@ class Indexer:
                 "Failed to get status. Status code: " f"{response.status_code}"
             )
 
-    def get_indexing_status(self, inspection_url: str) -> dict:
+    async def get_indexing_status(self, inspection_url: str) -> dict:
         """Get indexing status of a URL
 
         Args:
@@ -112,32 +114,32 @@ class Indexer:
             "inspectionUrl": inspection_url,
             "siteUrl": self._site_url,
         }
-        response = requests.post(api, headers=headers, json=data)
-        if response.status_code == 200:
-            resp_data = (
-                response.json()
-                .get("inspectionResult", {})
-                .get("indexStatusResult", {})
-            )
-            status = resp_data.get("coverageState", None)
-            last_crawled_at = None
-            if resp_data.get("lastCrawlTime"):
-                # not bothering with the timezone for now.
-                last_crawled_at = dateutil.parser.parse(
-                    resp_data["lastCrawlTime"]
-                )
-            return {
-                "status": status,
-                "last_crawled_at": last_crawled_at,
-                "last_checked": datetime.datetime.utcnow(),
-            }
-        elif response.status_code == 403:
-            return {
-                "status": "Forbidden",
-                "last_crawled_at": None,
-            }
-        else:
-            return {"status": "Error", "last_crawled_at": None}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(api, headers=headers, json=data) as resp:
+                if resp.status == 200:
+                    resp_json = await resp.json()
+                    resp_data = resp_json.get("inspectionResult", {}).get(
+                        "indexStatusResult", {}
+                    )
+                    status = resp_data.get("coverageState", None)
+                    last_crawled_at = None
+                    if resp_data.get("lastCrawlTime"):
+                        # not bothering with the timezone for now.
+                        last_crawled_at = dateutil.parser.parse(
+                            resp_data["lastCrawlTime"]
+                        )
+                    return {
+                        "status": status,
+                        "last_crawled_at": last_crawled_at,
+                        "last_checked": datetime.datetime.utcnow(),
+                    }
+                elif resp.status == 403:
+                    return {
+                        "status": "Forbidden",
+                        "last_crawled_at": None,
+                    }
+                else:
+                    return {"status": "Error", "last_crawled_at": None}
 
     def is_indexable(self, status: str) -> bool:
         return status in self.INDEXABLE_STATUSES
