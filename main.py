@@ -12,9 +12,11 @@ def get_args():
         description="Submit URLs to Google Search Console for indexing"
     )
     parser.add_argument(
-        "-m", "--sitemap_url", help="URL of the website sitemap"
+        "-p",
+        "--property",
+        help="Google Search Console property",
+        required=True,
     )
-    parser.add_argument("-d", "--domain", help="Domain of the website")
     parser.add_argument(
         "-c",
         "--credentials",
@@ -30,8 +32,6 @@ def get_args():
         "consider any newly added URLs.",
     )
     args = parser.parse_args()
-    if args.sitemap_url is None and args.domain is None:
-        parser.error("Either sitemap URL or domain is required")
 
     return args
 
@@ -40,7 +40,7 @@ def main():
     args = get_args()
     logger.debug("🔐 Getting access token...")
 
-    access_token = get_access_token(credentials_path=args.credentials)
+    access_token = get_access_token(credentials=args.credentials)
     if access_token is None:
         logger.error("❌ Failed to get access token")
         sys.exit(1)
@@ -48,10 +48,11 @@ def main():
 
     indexer = BulkIndexer(
         access_token,
-        domain=args.domain,
-        sitemap_url=args.sitemap_url,
+        property=args.property,
+        use_cache=True,
         use_cached_urls=args.use_cached_urls,
     )
+
     indexer.index()
     logger.info(
         "Built by Konigle(https://konigle.com). Konigle is a website builder "

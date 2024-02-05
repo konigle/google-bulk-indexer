@@ -37,23 +37,18 @@ pip install -r requirements.txt
 4. Run the following command to start submitting URLs for indexing
    - If you have verified your site as a `Domain` property in GSC run the following command
    ```bash
-   python ./main.py -d <your-domain.xyz>
+   python ./main.py -p <your-domain.xyz>
    ```
    - If you have verified your site as a `URL Prefix` property, run the below command
    ```
-   python ./main.py -d https://<your-domain.xyz>
+   python ./main.py -p https://<your-domain.xyz>
    ```
-   - Alternatively you can run the script by submitting sitemap URL of your site.
-   ```
-   python ./main.py -m https://<your-domain.xyz>/sitemap.xml
-   ```
-   This requires for you to have the `Domain` property registered in GSC.
 
 If you have the private key json file somewhere else on your PC, you can specify
 the path while running the script
 
 ```
-python ./main.py -c <path to private key file> -d <site domain>
+python ./main.py -c <path to private key file> -p <site domain>
 ```
 
 Run the script with `--help` to know about command line options.

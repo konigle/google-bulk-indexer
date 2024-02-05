@@ -13,47 +13,72 @@ class BulkIndexer:
     def __init__(
         self,
         access_token: str,
-        domain: str = None,
-        sitemap_url: str = None,
+        property: str = None,
+        urls: typing.List[str] = None,
+        use_cache: bool = True,
         use_cached_urls: bool = False,
     ) -> None:
-        if domain is None and sitemap_url is None:
-            raise ValueError("Either domain or sitemap URL is required")
+        """Bulk indexer for Google Search Console
+
+        Args:
+            access_token (str): Google service account oauth2 access token
+            property (str, optional): GSC property to index. Needed if `urls`
+                is not provided. Defaults to None.
+            urls (typing.List[str], optional): List of URLs to index.
+                Needed if property is not provided. Defaults to None.
+            use_cache (bool, optional): Whether to use cache to store the
+                indexing and notification status. Defaults to True.
+            use_cached_urls (bool, optional): Whether to use cached URLs
+                instead of loading sitemaps. Applicable only if `urls` is not
+                provided and `use_cache` is True Defaults to False.
+
+        Raises:
+            ValueError: When both `property` and `urls` are not provided
+        """
+        if property is None and not urls:
+            raise ValueError("Either property or urls is required")
 
         self._access_token = access_token
-        self._sitemap_url = sitemap_url
+        self._use_cache = use_cache
         self._use_cached_urls = use_cached_urls
-        if domain is not None:
-            self._domain = domain
+        if property is not None:
+            self._property = property
         else:
-            self._domain = urlparse(sitemap_url).netloc
-        self._site_url = gsc.get_site_url(self._domain)
+            self._property = f"https://{urlparse(urls[0]).netloc}/"
+        # clean the property and get the site url
+        self._site_url = gsc.get_site_url(self._property)
         self._sitemaps = []
-        self._urls = []
-        self._cache = utils.StatusCache(self._site_url)
+        self._urls = urls or []
+        if self._use_cache:
+            self._cache = utils.StatusCache(self._site_url)
+        else:
+            self._cache = {}  # dummy cache
         self._indexer = gsc.Indexer(self._access_token, self._site_url)
         self._cache_timeout = datetime.timedelta(days=14)
         self._status_urls_map = {}
         self._num_submitted = 0
 
-    def index(self):
-        self._load_sitemaps()
-        if not self._sitemaps:
-            utils.logger.warning(
-                f"❌ No sitemaps found for {self._domain}. Exiting..."
-            )
-            return
-        # load cache
-        self._cache.load()
+    def index(self) -> int:
 
-        # get page urls
-        if self._use_cached_urls:
-            self._load_cached_urls()
-        else:
-            self._load_urls()
+        # load cache
+        if self._use_cache:
+            self._cache.load()
+
+        # get page urls if not provided during init
+        if not self._urls:
+            self._load_sitemaps()
+            if not self._sitemaps:
+                utils.logger.warning(
+                    f"❌ No sitemaps found for {self._property}. Exiting..."
+                )
+                return
+            if self._use_cache and self._use_cached_urls:
+                self._load_cached_urls()
+            else:
+                self._load_urls()
         if not self._urls:
             utils.logger.warning(
-                f"❌ No URLs found for {self._domain}. Exiting..."
+                f"❌ No URLs found for {self._property}. Exiting..."
             )
             return
         else:
@@ -76,11 +101,12 @@ class BulkIndexer:
             "🚀 All done. Run this when you add new pages or update page "
             "content"
         )
+        return self._num_submitted
 
     def _request_indexing(self, urls: typing.List[str]):
         for url in urls:
             utils.logger.info(f"👩‍💻 Working on {url}")
-            current_state = self._cache[url] or {}
+            current_state = self._cache.get(url) or {}
             notification_status = None
             try:
                 # assuming that we will not hit this quota of 180 requests
@@ -94,21 +120,24 @@ class BulkIndexer:
                     "Google to index"
                 )
             except Exception:
-                # getting notification failed. try to submit
+                # getting notification status failed. try to submit
                 try:
                     notification_status = self._indexer.request_indexing(url)
                     self._num_submitted += 1
                     utils.logger.info(
-                        "✅ Submitted for indexing. Should be indexed few days."
+                        "✅ Submitted for indexing. Should be indexed in "
+                        "few days."
                     )
                 except Exception:
                     utils.logger.error(f"Failed to submit {url}")
             if notification_status is not None:
                 current_state.update(notification_status)
+                # just setting dummy cache for debugging purpose. Cache is not
+                # used if self._use_cache is False
                 self._cache[url] = current_state
             if self._num_submitted > self.REQUEST_QUOTA:
                 utils.logger.warning(
-                    f"Daily request quota of {self.REQUEST_QUOTA} is "
+                    f"Daily request quota of {self.REQUEST_QUOTA} URLs is "
                     "exhausted! Try running this in a day"
                 )
 
@@ -123,7 +152,7 @@ class BulkIndexer:
         # TODO: do async requests to speed things up.
         utils.logger.info("Checking indexing status...")
         for url in self._urls:
-            current_state = self._cache[url] or {}
+            current_state = self._cache.get(url) or {}
             if self._should_check_indexing_status(current_state):
                 indexing_status = self._indexer.get_indexing_status(url)
                 current_state.update(indexing_status)
@@ -132,16 +161,11 @@ class BulkIndexer:
             else:
                 status = current_state.get("status")
             self._status_urls_map.setdefault(status, []).append(url)
-
-        self._cache.dump()
+        if self._use_cache:
+            self._cache.dump()
 
     def _load_sitemaps(self):
-        if self._sitemap_url is not None:
-            self._sitemaps = [self._sitemap_url]
-        else:
-            self._sitemaps = gsc.get_sitemaps(
-                self._site_url, self._access_token
-            )
+        self._sitemaps = gsc.get_sitemaps(self._site_url, self._access_token)
 
     def _load_urls(self):
         for sitemap_url in self._sitemaps:
@@ -150,9 +174,12 @@ class BulkIndexer:
                 self._urls.extend(urls)
 
     def _load_cached_urls(self):
+        assert self._cache is not None, "Cache is required"
         self._urls = self._cache.keys()
 
     def _should_check_indexing_status(self, state: dict) -> bool:
+        if not self._use_cache:
+            return True
         # url not present in the cache
         if not state:
             return True

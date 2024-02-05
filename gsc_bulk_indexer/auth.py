@@ -1,5 +1,6 @@
 import json
 import os
+import typing
 
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
@@ -10,12 +11,14 @@ SCOPES = [
 ]
 
 
-def get_access_token(credentials_path: str = "./service_account.json") -> str:
+def get_access_token(
+    credentials: typing.Union[str, typing.Dict] = "./service_account.json"
+) -> str:
     """Get access token from service account credentials.
 
     Args:
-        credentials_path (str, optional): Path to the service account
-            credentials file.
+        credentials (str, optional): Path to the service account
+            credentials file or the credentials dict.
             Defaults to "./service_account.json".
 
     Raises:
@@ -24,12 +27,15 @@ def get_access_token(credentials_path: str = "./service_account.json") -> str:
     Returns:
         str: Access token.
     """
-    if not os.path.exists(credentials_path):
-        raise FileNotFoundError(
-            f"Credentials file not found at {credentials_path}"
-        )
-    with open(credentials_path) as f:
-        credentials_info = json.load(f)
+    if isinstance(credentials, str):
+        if not os.path.exists(credentials):
+            raise FileNotFoundError(
+                f"Credentials file not found at {credentials}"
+            )
+        with open(credentials) as f:
+            credentials_info = json.load(f)
+    else:
+        credentials_info = credentials
     credentials = service_account.Credentials.from_service_account_info(
         credentials_info
     )

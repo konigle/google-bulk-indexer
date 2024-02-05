@@ -61,3 +61,9 @@ class StatusCache(dict):
 
     def __setitem__(self, __key: str, __value: dict) -> None:
         self._status[__key] = __value
+
+    def __str__(self) -> str:
+        return self._status.__str__()
+
+    def __bool__(self) -> bool:
+        return bool(self._status)
