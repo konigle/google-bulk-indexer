@@ -1,5 +1,4 @@
 import argparse
-import itertools
 import logging
 import sys
 
@@ -37,7 +36,17 @@ def get_args():
     return args
 
 
+def setup_logger():
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+
 def main():
+    setup_logger()
     args = get_args()
     logger.debug("🔐 Getting access token...")
 
@@ -61,15 +70,5 @@ def main():
     )
 
 
-def setup_logger():
-    logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
-    handler.setFormatter(formatter)
-    handler.setLevel(logging.INFO)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
-    setup_logger()
-    main()
+    sys.exit(main())

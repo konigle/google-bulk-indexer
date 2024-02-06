@@ -1,10 +1,19 @@
 [tool.poetry]
 name = "gsc-bulk-indexer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Utilities for automatically submitting website pages for indexing in bulk to Google Search Console"
 authors = ["Konigle Developers <developers@konigle.com>"]
+maintainers = [
+    "Konigle Developers <developers@konigle.com>",
+    "Gopal Hegde <gplhegde@gmail.com>"
+]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/konigle/google-bulk-indexer"
+keywords = [
+    "google search console", "bulk indexing", "seo", 
+    "search engine optimization"
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -14,10 +23,14 @@ python-dateutil = "^2.8.2"
 aiohttp = "~3.7.0"
 
 
-[tool.poetry.group.dev.dependencies]
-twine = "^4.0.2"
-keyrings-google-artifactregistry-auth = "^1.1.2"
+[tool.poetry.scripts]
+gsc_bulk_index = 'gsc_bulk_indexer.submit:main'
+
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+Homepage = "https://github.com/konigle/google-bulk-indexer"
+Isssues = "https://github.com/konigle/google-bulk-indexer/issues"
