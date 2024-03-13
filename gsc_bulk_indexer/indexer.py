@@ -11,6 +11,7 @@ class BulkIndexer:
     """Submits the URLs of a website for indexing in Google Search Console"""
 
     REQUEST_QUOTA = 200
+    INSPECTION_QUOTA = 2000
 
     def __init__(
         self,
@@ -172,7 +173,11 @@ class BulkIndexer:
     def _batched_check_indexing_status(
         self, urls: typing.List[str], batch_size: int = 10
     ):
-        for url_batch in itertools.zip_longest(*[iter(urls)] * batch_size):
+        for idx, url_batch in enumerate(itertools.zip_longest(*[iter(urls)] * batch_size)):
+            
+            if batch_size * (idx + 1) >= self.INSPECTION_QUOTA:
+                return
+            
             url_batch = list(filter(None, url_batch))
             current_states = asyncio.run(
                 self._check_indexing_status_batch(url_batch)
