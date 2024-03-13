@@ -176,6 +176,10 @@ class BulkIndexer:
         for idx, url_batch in enumerate(itertools.zip_longest(*[iter(urls)] * batch_size)):
             
             if batch_size * (idx + 1) >= self.INSPECTION_QUOTA:
+                utils.logger.warning(
+                    f"❌ Daily request quota of {self.REQUEST_QUOTA} URLs is "
+                    "exhausted! Try running this in a day again."
+                )
                 return
             
             url_batch = list(filter(None, url_batch))
