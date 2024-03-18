@@ -159,7 +159,7 @@ class BulkIndexer:
         utils.logger.info("Checking indexing status...")
         to_recheck: typing.List[str] = []
         for url in self._urls:
-            current_state = self._cache.get(url) or {}
+            current_state = self._cache._status.get(url) or {}
             if self._should_check_indexing_status(current_state):
                 to_recheck.append(url)
             else:
@@ -177,7 +177,7 @@ class BulkIndexer:
             
             if batch_size * (idx + 1) >= self.INSPECTION_QUOTA:
                 utils.logger.warning(
-                    f"❌ Daily request quota of {self.REQUEST_QUOTA} URLs is "
+                    f"❌ Daily request quota of {self.INSPECTION_QUOTA} URLs is "
                     "exhausted! Try running this in a day again."
                 )
                 return
