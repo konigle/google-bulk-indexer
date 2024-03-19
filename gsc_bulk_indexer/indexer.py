@@ -109,7 +109,7 @@ class BulkIndexer:
     def _request_indexing(self, urls: typing.List[str]):
         for url in urls:
             utils.logger.info(f"👩‍💻 Working on {url}")
-            current_state = self._cache.get(url) or {}
+            current_state = self._cache[url] or {}
             notification_status = None
             try:
                 # assuming that we will not hit this quota of 180 requests
@@ -159,7 +159,7 @@ class BulkIndexer:
         utils.logger.info("Checking indexing status...")
         to_recheck: typing.List[str] = []
         for url in self._urls:
-            current_state = self._cache._status.get(url) or {}
+            current_state = self._cache[url] or {}
             if self._should_check_indexing_status(current_state):
                 to_recheck.append(url)
             else:
@@ -187,7 +187,7 @@ class BulkIndexer:
                 self._check_indexing_status_batch(url_batch)
             )
             for url, state in zip(url_batch, current_states):
-                current_state = self._cache.get(url) or {}
+                current_state = self._cache[url] or {}
                 current_state.update(state)
                 self._cache[url] = current_state
                 status = state.get("status")
