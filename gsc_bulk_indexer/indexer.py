@@ -11,6 +11,7 @@ class BulkIndexer:
     """Submits the URLs of a website for indexing in Google Search Console"""
 
     REQUEST_QUOTA = 200
+    INSPECTION_QUOTA = 2000
 
     def __init__(
         self,
@@ -108,7 +109,7 @@ class BulkIndexer:
     def _request_indexing(self, urls: typing.List[str]):
         for url in urls:
             utils.logger.info(f"👩‍💻 Working on {url}")
-            current_state = self._cache.get(url) or {}
+            current_state = self._cache[url] or {}
             notification_status = None
             try:
                 # assuming that we will not hit this quota of 180 requests
@@ -158,7 +159,7 @@ class BulkIndexer:
         utils.logger.info("Checking indexing status...")
         to_recheck: typing.List[str] = []
         for url in self._urls:
-            current_state = self._cache.get(url) or {}
+            current_state = self._cache[url] or {}
             if self._should_check_indexing_status(current_state):
                 to_recheck.append(url)
             else:
@@ -172,13 +173,21 @@ class BulkIndexer:
     def _batched_check_indexing_status(
         self, urls: typing.List[str], batch_size: int = 10
     ):
-        for url_batch in itertools.zip_longest(*[iter(urls)] * batch_size):
+        for idx, url_batch in enumerate(itertools.zip_longest(*[iter(urls)] * batch_size)):
+            
+            if batch_size * (idx + 1) >= self.INSPECTION_QUOTA:
+                utils.logger.warning(
+                    f"❌ Daily request quota of {self.INSPECTION_QUOTA} URLs is "
+                    "exhausted! Try running this in a day again."
+                )
+                return
+            
             url_batch = list(filter(None, url_batch))
             current_states = asyncio.run(
                 self._check_indexing_status_batch(url_batch)
             )
             for url, state in zip(url_batch, current_states):
-                current_state = self._cache.get(url) or {}
+                current_state = self._cache[url] or {}
                 current_state.update(state)
                 self._cache[url] = current_state
                 status = state.get("status")
