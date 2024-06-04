@@ -1,5 +1,4 @@
 import datetime
-import re
 import typing
 import urllib.parse
 
@@ -15,9 +14,7 @@ __all__ = [
 
 
 def get_site_url(domain_or_url: str) -> str:
-    if domain_or_url.startswith("http://") or domain_or_url.startswith(
-        "https://"
-    ):
+    if domain_or_url.startswith("http://") or domain_or_url.startswith("https://"):
         if domain_or_url.endswith("/"):
             return domain_or_url
         else:
@@ -69,8 +66,7 @@ class Indexer:
             return self._parse_notification_status(response.json())
         else:
             raise Exception(
-                "Failed to request indexing. Status code: "
-                f"{response.status_code}"
+                "Failed to request indexing. Status code: " f"{response.status_code}"
             )
 
     def remove_indexing(self, url: str) -> dict:
@@ -81,8 +77,7 @@ class Indexer:
             return self._parse_notification_status(response.json())
         else:
             raise Exception(
-                "Failed to remove indexing. Status code: "
-                f"{response.status_code}"
+                "Failed to remove indexing. Status code: " f"{response.status_code}"
             )
 
     def get_notification_status(self, url: str) -> dict:
@@ -146,15 +141,11 @@ class Indexer:
 
     def _parse_notification_status(self, status: dict) -> dict:
         last_notified_at = None
-        if status.get("latestUpdate") and status["latestUpdate"].get(
-            "notifyTime"
-        ):
+        if status.get("latestUpdate") and status["latestUpdate"].get("notifyTime"):
             last_notified_at = dateutil.parser.parse(
                 status["latestUpdate"]["notifyTime"]
             )
-        elif status.get("latestRemove") and status["latestRemove"].get(
-            "notifyTime"
-        ):
+        elif status.get("latestRemove") and status["latestRemove"].get("notifyTime"):
             last_notified_at = dateutil.parser.parse(
                 status["latestRemove"]["notifyTime"]
             )
